@@ -1,65 +1,79 @@
 # Beth's Books
 
-A personal reading library and tracker, built as an installable, offline-first web app (PWA) for Android.
+A personal reading library and tracker: an installable, offline-first web app (PWA) for Android, hosted on
+Cloudflare Pages, with an optional online library (Cloudflare D1) so books can be added from a laptop.
 
-Everything is stored on the device (IndexedDB). Nothing is sent to a server. The only online feature is the optional
-"Search for a book" lookup, which uses the free Open Library catalogue.
+```
+public/            the website (Cloudflare Pages "build output directory")
+  index.html       the app
+  x/               one-off spreadsheet importer, at /x/
+  _headers         caching rules for Cloudflare
+functions/
+  api/sync.js      the sync API, at /api/sync (Cloudflare Pages Function)
+```
 
-There is no build step: the files in this folder are the site.
+There is no build step.
 
-## Hosting: GitHub + Cloudflare Pages
+## 1. Put it on GitHub
+Push this whole folder, so `public/` and `functions/` are at the top level of the repo:
+```
+git init -b main
+git add .
+git commit -m "Beth's Books v1.1"
+git remote add origin https://github.com/<you>/<repo>.git
+git push -u origin main
+```
+If you upload through GitHub's website instead, **drag the folders** onto the upload page. The file picker loses the
+folder structure.
 
-1. Create a new GitHub repository and push the **contents** of this folder to it, so `index.html` sits at the repo root:
-   ```
-   cd bethsbooks
-   git init -b main
-   git add .
-   git commit -m "Beth's Books v1"
-   git remote add origin https://github.com/<you>/<repo>.git
-   git push -u origin main
-   ```
-2. In Cloudflare: **Workers & Pages → Create → Pages → Connect to Git**, and pick the repository.
-3. Build settings:
-   - Framework preset: **None**
-   - Build command: *(leave empty)*
-   - Build output directory: **/**
-4. Deploy. You get an `https://<project>.pages.dev` address (a custom domain can be added later).
+## 2. Cloudflare Pages project
+**Workers & Pages → Create application → Pages → Connect to Git**, pick the repo, then:
+- Framework preset: **None**
+- Build command: *(leave blank)*
+- Build output directory: **`public`**
 
-Every push to `main` redeploys automatically. `_headers` tells Cloudflare not to cache `index.html` and `sw.js`,
-so updates reach the phone promptly.
+If the project already exists: **Settings → Build → Build configuration → Edit**, and set the output directory to `public`.
 
-## Installing on Beth's phone
-1. Open the address in **Chrome** on Android.
-2. Tap **⋮ → Install app** (or "Add to Home screen").
-3. Open Beth's Books from the home screen. It runs full-screen and works offline.
+## 3. Online library (D1 + sync key)
+1. **Storage & Databases → D1 → Create database**. Name it e.g. `bethsbooks`. You don't need to create any tables;
+   the app does that itself.
+2. In the Pages project: **Settings → Bindings → Add → D1 database bindings**. Variable name **`DB`**, database `bethsbooks`.
+3. In the Pages project: **Settings → Variables and Secrets → Add**. Name **`SYNC_KEY`**, choose **Encrypt** (secret),
+   value: a long passphrase only you and Beth know (e.g. four random words). This is what you type into the app.
+4. **Deployments → latest deployment → Retry deployment**. Bindings only take effect after a new deployment.
 
-## One-off spreadsheet import: `/x`
-The importer is not part of the app. It lives at `https://<project>.pages.dev/x/`.
+Check it: open `https://<project>.pages.dev/api/sync`. It should say `{"error":"unauthorised"}`. If it says
+`not_configured`, the binding or secret is missing; add it and redeploy.
 
+## 4. Beth's phone
+1. Open the site in **Chrome**, **⋮ → Install app**.
+2. In the app: **More → Connect to online library**, enter the sync key.
+
+From then on the app syncs on its own: when it opens, a moment after each change, when the connection comes back,
+and every few minutes while open. It keeps working offline; changes wait and go up later.
+**More → Online library** shows the status and has **Sync now**.
+
+## 5. Importing the spreadsheet (from a laptop)
 1. Save the spreadsheet as **CSV UTF-8** (Excel: *File → Save As → CSV UTF-8*). `.xlsx` also works.
-2. On **Beth's phone, in Chrome** (the same browser the app is installed from), open `/x/`.
-3. Choose the file, check the column matching, review the preview, and import. Books come in as **Read**.
-4. Tap **See my books**.
+2. On the laptop open `https://<project>.pages.dev/x/`, choose **Connect**, enter the sync key.
+3. Choose the file, check the column matching and the preview, then **Import**. The books are uploaded straight away.
+4. Beth's phone picks them up next time the app is open and online.
 
-The import has to happen on Beth's phone because the library lives in that browser's storage; importing on a laptop
-fills a library on the laptop instead.
+Books already in the online library are recognised by title and author and skipped by default, so importing again is safe.
 
-Duplicates (same title and author) are skipped by default, so running it twice is safe. When you're done, you can
-delete the `x/` folder from the repo and push; the app doesn't depend on it.
+## Covers
+Covers are found automatically on Open Library (free, no account) from each book's title and author, including
+imported books, which are filled in gradually in the background. Tap a cover on a book's page to pick a different one.
+Turn this off under **More → Covers**. Covers are saved as image links (not uploaded), and the app keeps a copy of each
+one it shows so they appear offline.
 
 ## Backups
-*More → Export & backup → Download full backup* now and then. The `.json` backup restores everything, including
-shelves, goals and covers, on any device.
+**More → Export & backup → Download full backup** gives a `.json` file with everything.
 
-## Updating the app later
-Change the files, bump `VERSION` in `sw.js` (e.g. `bb-v1.0.2`), and push. The app shows "A new version is ready"
-and refreshes when tapped. Beth's data is untouched by updates.
+## Updating the app
+Change the files, bump `VERSION` in `public/sw.js`, push. The app shows "A new version is ready".
 
-## Files
-- `index.html`, `manifest.webmanifest`, `sw.js` — app shell, install details, offline caching
-- `_headers` — Cloudflare Pages caching rules
-- `css/app.css` — Reading Nook theme (light and dark)
-- `js/` — `db.js` storage · `store.js` data and rules · `ui.js` sheets, dialogs, toasts · `views/` screens
-- `x/` — the one-off spreadsheet importer
-- `vendor/xlsx.full.min.js` — SheetJS (Apache-2.0) for Excel import/export, loaded only when needed
-- `fonts/` — Figtree and Newsreader (SIL Open Font License), self-hosted so they work offline
+## Running it locally
+```
+npx wrangler pages dev public --d1 DB=local --binding SYNC_KEY=test
+```
