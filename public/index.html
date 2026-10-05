@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Beth's Books</title>
+<meta name="description" content="Beth's personal reading library and tracker.">
+<meta name="theme-color" content="#EEF1EA">
+<meta name="color-scheme" content="light dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Beth's Books">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" href="./icons/favicon-64.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="preload" href="./fonts/figtree-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="./fonts/newsreader-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="./css/app.css">
+<script>
+  // Apply the saved theme before first paint to avoid a flash.
+  try { var t = localStorage.getItem('bb-theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+</script>
+</head>
+<body>
+<div id="splash" aria-hidden="true"><img src="./icons/icon-192.png" alt=""><div>Beth's Books</div></div>
+<div id="app">
+  <nav class="nav" id="nav" aria-label="Main"></nav>
+  <main id="main" tabindex="-1"></main>
+</div>
+<noscript><p style="padding:24px">Beth's Books needs JavaScript turned on.</p></noscript>
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>
