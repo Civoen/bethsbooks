@@ -3,6 +3,22 @@ import { esc, I, coverHTML, fmtDate, pct, STATUS, plural } from '../util.js';
 import { openSheet, closeSheet, confirmDialog, toast, safely } from '../ui.js';
 import { isWide, renderBooks } from './books.js';
 import { changeCover } from '../covers.js';
+import { shareBook } from '../share.js';
+import { tap, pop, heartBurst, petals, centreOf } from '../fx.js';
+
+/** Change a book's status, with a little celebration when it's finished (and a bigger one for the goal). */
+export async function markStatus(id, s) {
+  const b = getBook(id); if (!b || b.status === s) return;
+  tap();
+  const year = new Date().getFullYear(), goal = goalFor(year), before = finishedIn(year).length;
+  const ok = await safely(() => setStatus(id, s).then(() => true));
+  if (!ok) return;
+  pop(document.querySelectorAll('.segmented button[aria-pressed="true"]'));
+  if (s !== 'read') { toast(`Moved to ${STATUS[s].label}`); return; }
+  const after = finishedIn(year).length;
+  if (goal && before < goal && after >= goal) { petals(44); toast(`You've reached your ${year} reading goal!`, { timeout: 6000 }); }
+  else { petals(); toast('Marked as read — nice one'); }
+}
 
 function statusSeg(b) {
   const opt = (k, label) => `<button data-status="${k}" aria-pressed="${b.status === k}">${b.status === k ? I.check : ''}${label}</button>`;
@@ -46,6 +62,7 @@ function render(host, r) {
 
   host.innerHTML = `<div class="view">
     ${r.embedded ? '' : `<div class="topbar"><button class="icon-btn" data-a="back" aria-label="Back">${I.back}</button><span class="grow"></span>
+      <button class="icon-btn" data-a="share" aria-label="Share this book">${I.share}</button>
       <a class="icon-btn" href="#/edit/${b.id}" aria-label="Edit book">${I.edit}</a>
       <button class="icon-btn" data-a="menu" aria-label="More options">${I.more}</button></div>`}
     <div class="detail-hero"><button class="cover-btn" data-a="cover" aria-label="${b.cover ? 'Change cover' : 'Choose a cover'}">${coverHTML(b, 'lg')}</button>
@@ -63,20 +80,26 @@ function render(host, r) {
     <div class="panel"><h2>Genres</h2><div class="tags">${genres.map(([gid, n]) => `<a class="tag" href="#/books?genre=${gid}">${esc(n)}</a>`).join('')}<a class="tag add" href="#/edit/${b.id}">${genres.length ? 'Edit' : '+ Add genres'}</a></div>
       <h2 style="margin-top:6px">Shelves</h2><div class="tags">${shelves.map(([sid, n]) => `<a class="tag" href="#/shelf/${sid}">${I.shelf.replace('<svg', '<svg width="14" height="14"')} ${esc(n)}</a>`).join('')}<button class="tag add" data-a="shelves">+ ${shelves.length ? 'Change' : 'Add to shelf'}</button></div></div>
     ${dates.length || b.pageCount ? `<div class="panel"><h2>Details</h2><dl class="dates">${dates.map(([k, v]) => `<dt>${k}</dt><dd>${fmtDate(v)}</dd>`).join('')}${b.pageCount ? `<dt>Pages</dt><dd>${b.pageCount}</dd>` : ''}</dl></div>` : ''}
-    <div class="detail-actions"><a class="btn btn-outline" href="#/edit/${b.id}">${I.edit} Edit</a><button class="btn btn-danger" data-a="delete">${I.trash} Delete</button></div>
+    <div class="detail-actions"><button class="btn btn-soft" data-a="share">${I.share} Share</button><a class="btn btn-outline" href="#/edit/${b.id}">${I.edit} Edit</a><button class="btn btn-danger" data-a="delete">${I.trash} Delete</button></div>
   </div>`;
 
   host.addEventListener('click', async e => {
     const t = e.target;
     const st = t.closest('[data-status]');
-    if (st) { const s = st.dataset.status; if (s !== getBook(id)?.status) { await safely(() => setStatus(id, s)); toast(s === 'read' ? `Marked as read${b.pageCount ? '' : ''} — nice one` : `Moved to ${STATUS[s].label}`); } return; }
+    if (st) { await markStatus(id, st.dataset.status); return; }
     const rt = t.closest('[data-rate]');
-    if (rt) { const n = Number(rt.dataset.rate); await safely(() => setRating(id, getBook(id).rating === n ? null : n)); return; }
+    if (rt) { tap(); const n = Number(rt.dataset.rate); await safely(() => setRating(id, getBook(id).rating === n ? null : n)); pop(document.querySelectorAll('#rate button.on'), document, 45); return; }
     const a = t.closest('[data-a]')?.dataset.a;
     if (a === 'back') { if (window.__bbNav > 0) history.back(); else location.hash = '#/books'; }
-    if (a === 'fav') { await safely(() => toggleFavourite(id)); }
+    if (a === 'fav') {
+      tap(); const [x, y] = centreOf(t.closest('[data-a]'));
+      await safely(() => toggleFavourite(id));
+      if (getBook(id)?.favourite) heartBurst(x, y, 9);
+      pop(document.querySelectorAll('.detail-hero .heart-btn svg'));
+    }
     if (a === 'progress') openProgressSheet(id);
     if (a === 'cover') changeCover(id);
+    if (a === 'share') shareBook(id);
     if (a === 'review') openReviewSheet(id);
     if (a === 'shelves') openShelvesSheet(id);
     if (a === 'menu') openQuickActions(id, { detail: true });
@@ -118,7 +141,7 @@ export function openProgressSheet(id) {
       el.addEventListener('click', async e => {
         const s = e.target.closest('[data-step]');
         if (s) { let v = (parseInt(pg.value, 10) || 0) + Number(s.dataset.step); const t = total(); v = Math.max(0, t ? Math.min(t, v) : v); pg.value = v; upd(); }
-        if (e.target.closest('[data-a="finish"]')) { closeSheet(); await safely(() => setStatus(id, 'read')); toast('Marked as read — nice one'); }
+        if (e.target.closest('[data-a="finish"]')) { closeSheet(); await markStatus(id, 'read'); }
       });
       el.querySelector('form').addEventListener('submit', async e => {
         e.preventDefault();
@@ -126,7 +149,7 @@ export function openProgressSheet(id) {
         if (pt && t) await safely(() => updateBook(id, { pageCount: t }));
         await safely(() => setProgress(id, v));
         closeSheet();
-        if (t && v >= t) toast('That’s the last page!', { action: 'Mark as read', onAction: () => safely(() => setStatus(id, 'read')) });
+        if (t && v >= t) toast('That’s the last page!', { action: 'Mark as read', onAction: () => markStatus(id, 'read') });
         else toast('Progress saved');
       });
     },
@@ -180,18 +203,20 @@ export function openQuickActions(id, { detail = false } = {}) {
       <button class="menu-item" data-a="fav"><span class="ic">${b.favourite ? I.heartFill : I.heart}</span><span class="tx"><b>${b.favourite ? 'Remove from favourites' : 'Add to favourites'}</b></span></button>
       <button class="menu-item" data-a="shelves"><span class="ic">${I.shelf}</span><span class="tx"><b>Shelves</b><span>${b.shelves.length ? esc(b.shelves.map(shelfName).join(', ')) : 'Not on any shelf'}</span></span></button>
       ${detail ? '' : `<button class="menu-item" data-a="open"><span class="ic">${I.books}</span><span class="tx"><b>Open book</b></span></button>`}
+      <button class="menu-item" data-a="share"><span class="ic">${I.share}</span><span class="tx"><b>Share</b><span>Copy a link with your rating and review</span></span></button>
       <button class="menu-item" data-a="cover"><span class="ic">${I.bookOpen}</span><span class="tx"><b>${b.cover ? 'Change cover' : 'Choose a cover'}</b><span>From Open Library</span></span></button>
       <button class="menu-item" data-a="edit"><span class="ic">${I.edit}</span><span class="tx"><b>Edit details</b></span></button>
       <button class="menu-item danger" data-a="delete"><span class="ic">${I.trash}</span><span class="tx"><b>Delete book</b></span></button></div>`,
     onMount: el => el.addEventListener('click', async e => {
       const s = e.target.closest('[data-status]');
-      if (s) { closeSheet(); if (s.dataset.status !== b.status) { await safely(() => setStatus(id, s.dataset.status)); toast(`Moved to ${STATUS[s.dataset.status].label}`); } return; }
+      if (s) { closeSheet(); await markStatus(id, s.dataset.status); return; }
       const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return;
-      if (a === 'fav') { closeSheet(); await safely(() => toggleFavourite(id)); toast(getBook(id).favourite ? 'Added to favourites' : 'Removed from favourites'); }
+      if (a === 'fav') { tap(); const [x, y] = centreOf(e.target.closest('[data-a]').querySelector('.ic')); closeSheet(); await safely(() => toggleFavourite(id)); if (getBook(id).favourite) heartBurst(x, y); toast(getBook(id).favourite ? 'Added to favourites' : 'Removed from favourites'); }
       if (a === 'shelves') openShelvesSheet(id);
       if (a === 'open') closeSheet('/book/' + id);
       if (a === 'edit') closeSheet('/edit/' + id);
       if (a === 'cover') changeCover(id);
+      if (a === 'share') { closeSheet(); shareBook(id); }
       if (a === 'delete') confirmDelete(id);
     }),
   });

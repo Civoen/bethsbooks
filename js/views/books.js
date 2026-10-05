@@ -3,6 +3,7 @@ import { esc, I, coverHTML, starsText, badgeHTML, norm, plural, STATUS, debounce
 import { openSheet, closeSheet, confirmDialog, promptText, toast, safely } from '../ui.js';
 import { openQuickActions } from './detail.js';
 import detailView from './detail.js';
+import { tap, pop, heartBurst, centreOf } from '../fx.js';
 
 // Library filters survive navigation between screens.
 export const filters = { q: '', status: 'all', fav: false, genre: '', shelf: '', minRating: 0, sort: 'recent' };
@@ -145,7 +146,7 @@ function render(host, r, selectedId) {
   const dyn = host.querySelector('#lib-dyn');
   const q = host.querySelector('#q');
   const clearBtn = host.querySelector('[data-a="clear-q"]');
-  const refresh = () => { dyn.innerHTML = dynamicHTML(lockedShelf, selectedId); };
+  const refresh = () => { host.closest('.enter')?.classList.remove('enter'); dyn.innerHTML = dynamicHTML(lockedShelf, selectedId); };
   host._refresh = refresh;
   const onInput = debounce(() => { filters.q = q.value; clearBtn.hidden = !q.value; refresh(); }, 90);
   q.addEventListener('input', onInput);
@@ -154,9 +155,17 @@ function render(host, r, selectedId) {
   host.addEventListener('change', e => { if (e.target.id === 'sort') { filters.sort = e.target.value; refresh(); } });
   host.addEventListener('click', async e => {
     const t = e.target;
-    const st = t.closest('[data-status]'); if (st) { filters.status = st.dataset.status; refresh(); return; }
+    const st = t.closest('[data-status]'); if (st) { filters.status = st.dataset.status; refresh(); pop(dyn.querySelectorAll(`[data-status="${filters.status}"]`)); return; }
     const fav = t.closest('[data-fav]');
-    if (fav) { e.preventDefault(); const b = getBook(fav.dataset.fav); await safely(() => toggleFavourite(fav.dataset.fav)); if (b) toast(b.favourite ? 'Added to favourites' : 'Removed from favourites'); return; }
+    if (fav) {
+      e.preventDefault(); tap();
+      const id = fav.dataset.fav, b = getBook(id), [x, y] = centreOf(fav);
+      await safely(() => toggleFavourite(id));
+      if (b?.favourite) heartBurst(x, y);
+      pop(document.querySelectorAll(`[data-fav="${id}"] svg`));
+      if (b) toast(b.favourite ? 'Added to favourites' : 'Removed from favourites');
+      return;
+    }
     const cl = t.closest('[data-clear]');
     if (cl) { const k = cl.dataset.clear; filters[k] = k === 'minRating' ? 0 : k === 'fav' ? false : ''; refresh(); return; }
     if (t.closest('[data-clear-all]')) { Object.assign(filters, { fav: false, genre: '', shelf: '', minRating: 0, status: 'all' }); refresh(); return; }

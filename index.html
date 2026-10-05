@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Beth's Books</title>
 <meta name="description" content="Beth's personal reading library and tracker.">
-<meta name="theme-color" content="#EEF1EA">
-<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#FBEFF2">
+<meta name="color-scheme" content="light">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Beth's Books">
@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="./css/app.css">
 <script>
   // Apply the saved theme before first paint to avoid a flash.
-  try { var t = localStorage.getItem('bb-theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+  try { var t = localStorage.getItem('bb-theme'), bg = { cream: '#F7F0E3', blue: '#EEF2FC' }[t]; if (bg) { document.documentElement.setAttribute('data-theme', t); document.querySelector('meta[name="theme-color"]').setAttribute('content', bg); } } catch (e) {}
 </script>
 </head>
 <body>

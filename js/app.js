@@ -4,6 +4,7 @@ import { I, esc } from './util.js';
 import { openSheet, closeSheet, toast, sheetOpen } from './ui.js';
 import * as sync from './sync.js';
 import { fillMissingCovers } from './covers.js';
+import { tap } from './fx.js';
 import home from './views/home.js';
 import books from './views/books.js';
 import detail from './views/detail.js';
@@ -43,6 +44,8 @@ function render(scrollTop = true) {
   if (active && active.view.leave) active.view.leave();
   active = r;
   r.host = document.createElement('div');
+  r.host.className = 'enter'; // entrance animations play once, when arriving on a screen
+  const enterHost = r.host; setTimeout(() => enterHost.classList.remove('enter'), 2200);
   main.replaceChildren(r.host);
   r.view.render(r.host, r);
   setNav(r.tab);
@@ -76,7 +79,7 @@ function buildNav() {
   nav.innerHTML = item('home', '/home', I.home, 'Home') + item('books', '/books', I.books, 'Books') +
     `<button class="nav-add" type="button" aria-label="Add a book" id="nav-add">${I.plus}</button>` +
     item('stats', '/stats', I.stats, 'Stats') + item('more', '/more', I.more, 'More');
-  document.getElementById('nav-add').addEventListener('click', openAddMenu);
+  document.getElementById('nav-add').addEventListener('click', () => { tap(); openAddMenu(); });
 }
 
 export function openAddMenu() {
@@ -94,14 +97,18 @@ export function openAddMenu() {
 
 // ---------- Theme ----------
 export function applyTheme() {
-  const t = store.state.settings.theme;
-  try { localStorage.setItem('bb-theme', t || 'system'); } catch {}
-  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
-  else document.documentElement.removeAttribute('data-theme');
-  const dark = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
-  document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#111613' : '#EEF1EA');
+  const t = PALETTES[store.state.settings.theme] ? store.state.settings.theme : 'rose';
+  try { localStorage.setItem('bb-theme', t); } catch {}
+  if (t === 'rose') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', t);
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', PALETTES[t].bg);
 }
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+/** The three colour palettes. Colours here are only for the picker swatches and the phone's status bar. */
+export const PALETTES = {
+  rose: { name: 'Rosewater', bg: '#FBEFF2', dots: ['#B83A68', '#F9D6E2', '#FFE4B8'] },
+  cream: { name: 'Buttercream', bg: '#F7F0E3', dots: ['#96593A', '#F2DFC9', '#F9D9DE'] },
+  blue: { name: 'Cornflower', bg: '#EEF2FC', dots: ['#4565C4', '#D8E2FB', '#FFD3E2'] },
+};
 
 // ---------- Install prompt ----------
 export let installPrompt = null;

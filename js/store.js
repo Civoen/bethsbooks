@@ -6,7 +6,7 @@ export const state = {
   books: [],      // array of book objects
   genres: [],     // {id, name}
   shelves: [],    // {id, name, createdAt}
-  settings: { id: 'settings', name: 'Beth', theme: 'system', goals: {}, sort: 'recent' },
+  settings: { id: 'settings', name: 'Beth', theme: 'rose', goals: {}, sort: 'recent' },
 };
 
 const listeners = new Set();

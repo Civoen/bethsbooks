@@ -1,6 +1,7 @@
 import { state, getBook, addBook, updateBook, ensureGenre, createShelf, findDuplicate, genreName, MAX_GENRES } from '../store.js';
 import { esc, I, coverHTML, todayISO, STATUS, badgeHTML, starsText, debounce, norm } from '../util.js';
 import { openCoverPicker, autoCover, autoCoversOn } from '../covers.js';
+import { tap, pop } from '../fx.js';
 import { confirmDialog, toast, safely } from '../ui.js';
 import { searchBooks, rowHTML } from './books.js';
 import { ratingHTML } from './detail.js';
@@ -109,9 +110,9 @@ function render(host, r) {
   host.addEventListener('click', e => {
     const t = e.target;
     const st = t.closest('[data-st]');
-    if (st) { capture(); const prev = f.status; f.status = st.dataset.st; host.querySelectorAll('[data-st]').forEach(b => b.setAttribute('aria-pressed', b === st)); if (f.status === 'read' && prev !== 'read' && !f.dateFinished && !editing) f.dateFinished = todayISO(); drawDyn(); return; }
+    if (st) { tap(); capture(); const prev = f.status; f.status = st.dataset.st; host.querySelectorAll('[data-st]').forEach(b => b.setAttribute('aria-pressed', b === st)); if (f.status === 'read' && prev !== 'read' && !f.dateFinished && !editing) f.dateFinished = todayISO(); drawDyn(); return; }
     const rt = t.closest('[data-rate]');
-    if (rt) { e.preventDefault(); const n = Number(rt.dataset.rate); f.rating = f.rating === n ? null : n; capture(); drawDyn(); host.querySelector(`[data-rate="${n}"]`)?.focus(); return; }
+    if (rt) { e.preventDefault(); tap(); const n = Number(rt.dataset.rate); f.rating = f.rating === n ? null : n; capture(); drawDyn(); host.querySelector(`[data-rate="${n}"]`)?.focus(); pop(host.querySelectorAll('#f-rate button.on'), host, 45); return; }
     const g = t.closest('[data-g]');
     if (g) { const n = g.dataset.g; if (genres.some(x => norm(x) === norm(n))) genres = genres.filter(x => norm(x) !== norm(n)); else if (genres.length < MAX_GENRES) genres.push(n); drawGenres(); return; }
     const s = t.closest('[data-s]');

@@ -1,8 +1,8 @@
 // Beth's Books service worker — makes the app open and work fully offline.
-const VERSION = 'bb-v1.1.1';
+const VERSION = 'bb-v1.3.0';
 const SHELL = [
   './', './manifest.webmanifest', './css/app.css',
-  './js/app.js', './js/db.js', './js/store.js', './js/ui.js', './js/util.js', './js/sync.js', './js/syncui.js', './js/covers.js',
+  './js/app.js', './js/db.js', './js/store.js', './js/ui.js', './js/util.js', './js/sync.js', './js/syncui.js', './js/covers.js', './js/share.js', './js/fx.js',
   './js/views/home.js', './js/views/books.js', './js/views/detail.js', './js/views/form.js',
   './js/views/stats.js', './js/views/more.js', './js/views/io.js',
   './vendor/xlsx.full.min.js',

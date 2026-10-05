@@ -50,9 +50,9 @@ export function longDate() {
 
 // Generated cover colours for books without an image.
 const COVER_COLOURS = [
-  ['#3E5C76', '#F2F4F7'], ['#C2553A', '#FFF4EF'], ['#4F6B3A', '#F1F5EC'], ['#D9A441', '#2E2208'],
-  ['#2E2A33', '#EDE8F2'], ['#E3B5A4', '#3A211A'], ['#7A3E5C', '#FBEFF5'], ['#6B5B45', '#F6F0E6'],
-  ['#2F5D46', '#EAF4EE'], ['#8A6FA8', '#FBF7FF'], ['#B5562E', '#FFF3EC'], ['#476F84', '#EEF6FA'],
+  ['#7A3E5C', '#FCEEF4'], ['#C25B86', '#FFF4F9'], ['#E8A0B4', '#4A1F30'], ['#9E6B8F', '#FFF4FA'],
+  ['#5E4636', '#F7EFE4'], ['#96593A', '#FFF3EA'], ['#D9B48F', '#3E2A18'], ['#8E5B4A', '#FBF0EA'],
+  ['#2E3E6E', '#EEF2FC'], ['#5A6FB8', '#F4F7FF'], ['#8FA7C9', '#1F2542'], ['#5A5F9E', '#F3F4FF'],
 ];
 export function coverColour(title) {
   let h = 0; const s = norm(title);
@@ -163,6 +163,7 @@ export const I = {
   info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>'),
   refresh: svg('<path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4"/>'),
   phone: svg('<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>'),
+  share: svg('<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4"/>'),
   minus: svg('<path d="M5 12h14"/>', 'stroke-width="2.2"'),
   database: svg('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>'),
 };

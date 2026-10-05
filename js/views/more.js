@@ -2,13 +2,13 @@ import { state, saveSettings, renameGenre, deleteGenre, ensureGenre, createShelf
 import { esc, I, plural, fmtDate } from '../util.js';
 import { openSheet, closeSheet, confirmDialog, promptText, toast, safely } from '../ui.js';
 import { openGoalSheet } from './detail.js';
-import { installPrompt, promptInstall } from '../app.js';
+import { installPrompt, promptInstall, PALETTES } from '../app.js';
 import { exportCSV, exportXLSX, exportBackup, pickRestore } from './io.js';
 import * as sync from '../sync.js';
 import { openSyncSetup } from '../syncui.js';
 import { fillMissingCovers } from '../covers.js';
 
-const VERSION = '1.1.0';
+const VERSION = '1.3.0';
 
 const item = (href, icon, title, sub, attrs = '') => `<${href ? `a href="${href}"` : `button ${attrs}`} class="menu-item"><span class="ic">${icon}</span><span class="tx"><b>${title}</b>${sub ? `<span>${sub}</span>` : ''}</span><span class="chev">${I.chev}</span></${href ? 'a' : 'button'}>`;
 
@@ -40,8 +40,9 @@ function renderMore(host) {
     <div class="settings-group"><h2>Covers</h2><div class="card" style="padding:4px 10px">
       <label class="switch-row"><span><b>Find covers automatically</b><br><span class="muted" style="font-size:13px">Looks up each book on Open Library. Tap a book's cover to pick a different one.</span></span><span class="switch"><input type="checkbox" id="auto-cv" ${s.autoCovers !== false ? 'checked' : ''}><span></span></span></label>
     </div></div>
-    <div class="settings-group"><h2 id="th-l">Appearance</h2><div class="card" role="radiogroup" aria-labelledby="th-l">
-      ${[['system', 'Match my phone'], ['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => `<label class="radio-row"><input type="radio" name="theme" value="${v}" ${s.theme === v || (!s.theme && v === 'system') ? 'checked' : ''}><span>${l}</span></label>`).join('')}
+    <div class="settings-group"><h2 id="th-l">Colour palette</h2><div class="palettes" role="radiogroup" aria-labelledby="th-l">
+      ${Object.entries(PALETTES).map(([v, p]) => `<label class="palette"><input type="radio" name="theme" value="${v}" ${(PALETTES[s.theme] ? s.theme : 'rose') === v ? 'checked' : ''}>
+        <span class="sw" style="background:${p.bg}">${p.dots.map(c => `<i style="background:${c}"></i>`).join('')}</span><b>${p.name}</b><span class="tick" aria-hidden="true">${I.check}</span></label>`).join('')}
     </div></div>
     <div class="settings-group"><h2>App</h2><div class="card menu">
       ${standalone ? '' : installPrompt ? item(null, I.phone, "Install Beth's Books", 'Add it to your home screen', 'data-a="install"') : item(null, I.phone, "Install on your phone", 'How to add it to your home screen', 'data-a="install-help"')}

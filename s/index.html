@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A book from Beth's Books</title>
+<meta name="description" content="A book Beth wanted to share with you.">
+<meta property="og:title" content="A book from Beth's Books">
+<meta property="og:description" content="A book Beth wanted to share with you — open to see her rating and review.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#FBEFF2">
+<meta name="color-scheme" content="light">
+<link rel="icon" type="image/png" href="../icons/favicon-64.png">
+<link rel="stylesheet" href="../css/app.css">
+<style>
+  body{min-height:100%}
+  .share{max-width:520px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 32px) 20px calc(env(safe-area-inset-bottom) + 32px);display:flex;flex-direction:column;gap:22px}
+  .share .brand{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;font-weight:600;text-decoration:none}
+  .share .brand img{width:28px;height:28px;border-radius:8px}
+  .share .card{padding:22px;display:flex;flex-direction:column;gap:18px}
+  .share .hero{display:flex;gap:18px;align-items:flex-end}
+  .share h1{font-family:var(--serif);font-weight:600;font-size:30px;line-height:1.1;text-wrap:balance;word-break:break-word}
+  .share .by{color:var(--muted);font-size:16px;margin-top:6px}
+  .share .stars{color:var(--star);font-size:22px;letter-spacing:2px;margin-top:10px}
+  .share .stars small{font-size:13px;color:var(--muted);letter-spacing:0;margin-left:6px}
+  .share .label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+  .share .foot{text-align:center;color:var(--muted);font-size:13px}
+  @media (max-width:420px){.share .hero{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body>
+<main class="share" id="share">
+  <a class="brand" href="../"><img src="../icons/icon-192.png" alt="">Beth's Books</a>
+  <div class="card" id="book"><p class="muted" style="margin:0">Opening book…</p></div>
+  <p class="foot">Shared from Beth's personal reading library.</p>
+</main>
+<noscript><p style="padding:24px">This page needs JavaScript turned on to show the book.</p></noscript>
+<script type="module" src="./s.js"></script>
+</body>
+</html>

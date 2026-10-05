@@ -6,6 +6,7 @@ Cloudflare Pages, with an optional online library (Cloudflare D1) so books can b
 ```
 index.html         the app (repo root = the website)
 x/                 one-off spreadsheet importer, at /x/
+s/                 page that shows a shared book, at /s/
 _headers           caching rules for Cloudflare
 functions/api/     the sync API, at /api/sync (Cloudflare Pages Function)
 ```
@@ -64,6 +65,14 @@ Covers are found automatically on Open Library (free, no account) from each book
 imported books, which are filled in gradually in the background. Tap a cover on a book's page to pick a different one.
 Turn this off under **More → Covers**. Covers are saved as image links (not uploaded), and the app keeps a copy of each
 one it shows so they appear offline.
+
+## Colour palettes
+**More → Colour palette**: Rosewater (pink, the default), Buttercream (cream) or Cornflower (blue). The choice is per device.
+
+## Sharing a book
+On a book's page, tap **Share** (or long-press a book in the list). A link is copied that opens a page showing the title,
+author, Beth's rating and review. Everything is inside the link itself, so nothing is uploaded. On Android the
+"Share…" button in the message opens the phone's share sheet.
 
 ## Backups
 **More → Export & backup → Download full backup** gives a `.json` file with everything.
