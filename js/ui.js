@@ -61,6 +61,7 @@ export function openSheet({ title, sub, body, onMount, onClose, label }) {
   document.addEventListener('keydown', onKey);
   requestAnimationFrame(() => { scrim.classList.add('open'); el.classList.add('open'); });
   onMount && onMount(el);
+  attachSheetDrag(el, scrim);
   setTimeout(() => {
     if (!current || current.el !== el) return;
     const auto = el.querySelector('[autofocus]') || el.querySelector('button,a[href],input,select,textarea');
@@ -133,4 +134,45 @@ export function hideToast() { toastEl && toastEl.classList.remove('show'); }
 /** Run a data operation, showing a friendly error if it fails. */
 export async function safely(fn, msg = "We couldn't save that. Please try again.") {
   try { return await fn(); } catch (e) { console.error(e); toast(msg); return undefined; }
+}
+
+/** Drag a bottom sheet down to close it, like a native Android sheet. */
+function attachSheetDrag(el, scrim) {
+  if (matchMedia('(min-width: 900px)').matches) return; // a centred dialog on big screens
+  let startY = 0, startX = 0, dy = 0, dragging = false, decided = false, t0 = 0;
+  el.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    const tag = e.target.closest('input, textarea, select, [type=range], .cover-grid');
+    const onHandle = !!e.target.closest('.handle, h2');
+    // From the handle/title always; from elsewhere only when the sheet is scrolled to the top.
+    if (tag || (!onHandle && el.scrollTop > 0)) { decided = true; dragging = false; return; }
+    startY = e.touches[0].clientY; startX = e.touches[0].clientX; dy = 0; dragging = false; decided = false; t0 = Date.now();
+  }, { passive: true });
+  el.addEventListener('touchmove', e => {
+    if (decided && !dragging) return;
+    const my = e.touches[0].clientY - startY, mx = e.touches[0].clientX - startX;
+    if (!decided) {
+      if (my > 8 && my > Math.abs(mx)) { decided = true; dragging = true; el.style.transition = 'none'; }
+      else if (Math.abs(my) > 8 || Math.abs(mx) > 8) { decided = true; return; }
+      else return;
+    }
+    e.preventDefault();
+    dy = Math.max(0, my);
+    el.style.transform = `translateY(${dy}px)`;
+    scrim.style.opacity = String(Math.max(0, 1 - dy / (el.offsetHeight || 400)));
+  }, { passive: false });
+  el.addEventListener('touchend', () => {
+    if (!dragging) { decided = false; return; }
+    dragging = false; decided = false;
+    const fast = dy / Math.max(1, Date.now() - t0) > 0.5;
+    el.style.transition = '';
+    if (dy > Math.min(140, el.offsetHeight * 0.3) || (fast && dy > 40)) {
+      el.style.transform = 'translateY(100%)';
+      scrim.style.opacity = '';
+      closeSheet();
+    } else {
+      el.style.transform = '';
+      scrim.style.opacity = '';
+    }
+  });
 }

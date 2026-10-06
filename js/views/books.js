@@ -5,6 +5,8 @@ import { openSheet, closeSheet, confirmDialog, promptText, toast, safely } from 
 import { openQuickActions } from './detail.js';
 import detailView from './detail.js';
 import { tap, pop, heartBurst, centreOf } from '../fx.js';
+import { initRowSwipe, initAZ } from '../polish.js';
+import { markStatus } from './detail.js';
 
 // Library filters survive navigation between screens.
 export const filters = { q: '', status: 'all', fav: false, genre: '', shelf: '', minRating: 0, author: '', sort: 'recent' };
@@ -42,17 +44,17 @@ export function searchBooks(list, q) {
   return scored.sort((x, y) => y[0] - x[0]).map(x => x[1]);
 }
 
-export function rowHTML(b, selectedId, { heart = true } = {}) {
+export function rowHTML(b, selectedId, { heart = true, letter = '' } = {}) {
   const genres = b.genres.map(genreName).filter(Boolean);
   const sub = [badgeHTML(b.status)];
   if (b.status === 'read' && b.rating) sub.push(starsText(b.rating));
   else if (b.status === 'reading' && b.pageCount) sub.push(`<span class="count-line" style="font-size:12px">${Math.round((b.currentPage || 0) / b.pageCount * 100)}%</span>`);
   else if (genres.length) sub.push(`<span class="count-line" style="font-size:12px">${esc(genres[0])}</span>`);
-  return `<div class="book-row${b.id === selectedId ? ' selected' : ''}" data-id="${b.id}">
+  return `<div class="swipe-wrap" data-id="${b.id}"${letter ? ` data-l="${letter}"` : ''}><div class="sw-bg" aria-hidden="true"><span class="sw-left"></span><span class="sw-right"></span></div><div class="book-row${b.id === selectedId ? ' selected' : ''}" data-id="${b.id}">
     <a class="main" href="#/book/${b.id}"${b.id === selectedId ? ' aria-current="true"' : ''}>${coverHTML(b, 'sm')}
       <div class="meta"><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author)}</div><div class="sub">${sub.join('')}</div></div></a>
     ${heart ? `<button class="icon-btn heart-btn" data-fav="${b.id}" aria-pressed="${b.favourite}" aria-label="${b.favourite ? 'Remove from favourites' : 'Add to favourites'}: ${esc(b.title)}">${b.favourite ? I.heartFill : I.heart}</button>` : ''}
-  </div>`;
+  </div></div>`;
 }
 
 function applyFilters(lockedShelf) {
@@ -98,8 +100,13 @@ function dynamicHTML(lockedShelf, selectedId) {
       ? `<div class="empty"><div class="art">${I.shelf}</div><h2>This shelf is empty</h2><p>Open any book and choose “Shelves” to put it here.</p></div>`
       : `<div class="empty"><div class="art">${I.filter}</div><h2>No books here</h2><p>Nothing matches these filters.</p><button class="btn btn-soft" data-clear-all>Clear filters</button></div>`;
   } else {
-    const LIMIT = 300; // keep very large libraries snappy
-    results = `<div class="list" role="list">${list.slice(0, LIMIT).map(b => rowHTML(b, selectedId)).join('')}</div>${list.length > LIMIT ? `<p class="count-line" style="text-align:center">Showing ${LIMIT} of ${list.length}. Search to narrow it down.</p>` : ''}`;
+    const LIMIT = 1500; // keep very large libraries snappy
+    const az = !q && (filters.sort === 'title' || filters.sort === 'author') && list.length >= 25 && !isWide();
+    const letterOf = (b) => { const c = (filters.sort === 'author' ? surname(b.author) : sortTitle(b)).charAt(0).toUpperCase(); return /[A-Z]/.test(c) ? c : '#'; };
+    const shown = list.slice(0, LIMIT);
+    const letters = az ? new Set(shown.map(letterOf)) : null;
+    results = `<div class="list" role="list">${shown.map(b => rowHTML(b, selectedId, { letter: az ? letterOf(b) : '' })).join('')}</div>
+      ${az ? `<nav class="az" aria-label="Jump to letter">${'#ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(L => `<button type="button" data-az="${L}" ${letters.has(L) ? '' : 'disabled'} aria-label="${L === '#' ? 'Numbers and symbols' : L}">${L}</button>`).join('')}</nav>` : ''}${list.length > LIMIT ? `<p class="count-line" style="text-align:center">Showing ${LIMIT} of ${list.length}. Search to narrow it down.</p>` : ''}`;
   }
 
   return `<div class="chips" role="group" aria-label="Reading status">${chip('all', 'All')}${chip('read', 'Read')}${chip('reading', 'Reading')}${chip('want', 'Want to read')}</div>
@@ -133,9 +140,9 @@ function render(host, r, selectedId) {
     ${lockedShelf ? `<div class="topbar"><a class="icon-btn" href="#/shelves" aria-label="Back to shelves">${I.back}</a><span class="grow"></span>
       <button class="icon-btn" data-a="shelf-menu" aria-label="Shelf options">${I.more}</button></div>` : ''}
     <div class="page-head"><h1 class="page-title">${esc(title)}</h1>${lockedShelf ? '' : `<span class="count-line" style="padding-top:12px">${plural(state.books.length, 'book')}</span>`}</div>
-    <div class="search" role="search"><label for="q" class="sr">Search your library</label>${I.search}
+    <div class="sticky-search"><div class="search" role="search"><label for="q" class="sr">Search your library</label>${I.search}
       <input id="q" type="search" placeholder="${lockedShelf ? 'Search this shelf' : 'Have I read…? Title, author, review'}" value="${esc(filters.q)}" autocomplete="off" enterkeyhint="search">
-      <button class="icon-btn" data-a="clear-q" aria-label="Clear search" ${filters.q ? '' : 'hidden'}>${I.close}</button></div>
+      <button class="icon-btn" data-a="clear-q" aria-label="Clear search" ${filters.q ? '' : 'hidden'}>${I.close}</button></div></div>
     <div id="lib-dyn" style="display:flex;flex-direction:column;gap:14px">${dynamicHTML(lockedShelf, selectedId)}</div>
   </div>`;
 
@@ -180,7 +187,26 @@ function render(host, r, selectedId) {
     if (t.closest('[data-a="shelf-menu"]')) { openShelfMenu(lockedShelf); return; }
   });
 
-  // Long-press a book for quick actions
+  // Swipe a book: right to favourite, left to move it along (Want to read → Reading → Read)
+  initRowSwipe(host, (id) => {
+    const b = getBook(id); if (!b) return null;
+    const next = b.status === 'want' ? ['reading', 'Start reading', I.bookOpen] : b.status === 'reading' ? ['read', 'Mark as read', I.check] : [null, 'More options', I.more];
+    return {
+      right: { label: b.favourite ? 'Unfavourite' : 'Favourite', icon: b.favourite ? I.heart : I.heartFill,
+        run: async (bid, wrap) => {
+          const [x, y] = centreOf(wrap.querySelector('[data-fav]') || wrap);
+          await safely(() => toggleFavourite(bid));
+          const nb = getBook(bid);
+          if (nb?.favourite) heartBurst(x, y);
+          pop(document.querySelectorAll(`[data-fav="${bid}"] svg`));
+          toast(nb?.favourite ? 'Added to favourites' : 'Removed from favourites');
+        } },
+      left: { label: next[1], icon: next[2], run: (bid) => next[0] ? markStatus(bid, next[0]) : openQuickActions(bid) },
+    };
+  });
+  initAZ(host);
+
+
   let timer = null, startX = 0, startY = 0, fired = false;
   host.addEventListener('pointerdown', e => {
     const row = e.target.closest('.book-row'); if (!row || e.target.closest('[data-fav]')) return;

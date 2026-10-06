@@ -62,7 +62,7 @@ export function coverColour(title) {
 
 export function coverHTML(book, size = 'md') {
   const [bg, fg] = coverColour(book.title);
-  const img = book.cover ? `<img src="${esc(book.cover)}" alt="" loading="lazy" onerror="this.remove()">` : '';
+  const img = book.cover ? `<img src="${esc(book.cover)}" alt="" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.remove()">` : '';
   return `<div class="cover ${size}" style="--c:${bg};--ct:${fg}" aria-hidden="true"><div class="ct">${esc(book.title)}</div><div class="ca">${esc(book.author)}</div>${img}</div>`;
 }
 

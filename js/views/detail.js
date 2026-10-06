@@ -10,14 +10,17 @@ import { tap, pop, heartBurst, petals, centreOf } from '../fx.js';
 export async function markStatus(id, s) {
   const b = getBook(id); if (!b || b.status === s) return;
   tap();
+  // Remember how the book was, so the change can be undone.
+  const before0 = { status: b.status, dateStarted: b.dateStarted, dateFinished: b.dateFinished, currentPage: b.currentPage };
+  const undo = { action: 'Undo', onAction: async () => { await safely(() => updateBook(id, before0)); toast(`Moved back to ${STATUS[before0.status].label}`); } };
   const year = new Date().getFullYear(), goal = goalFor(year), before = finishedIn(year).length;
   const ok = await safely(() => setStatus(id, s).then(() => true));
   if (!ok) return;
   pop(document.querySelectorAll('.segmented button[aria-pressed="true"]'));
-  if (s !== 'read') { toast(`Moved to ${STATUS[s].label}`); return; }
+  if (s !== 'read') { toast(`Moved to ${STATUS[s].label}`, undo); return; }
   const after = finishedIn(year).length;
-  if (goal && before < goal && after >= goal) { petals(44); toast(`You've reached your ${year} reading goal!`, { timeout: 6000 }); }
-  else { petals(); toast('Marked as read — nice one'); }
+  if (goal && before < goal && after >= goal) { petals(44); toast(`You've reached your ${year} reading goal!`, { timeout: 7000, ...undo }); }
+  else { petals(); toast('Marked as read — nice one', undo); }
 }
 
 function statusSeg(b) {
@@ -65,7 +68,7 @@ function render(host, r) {
       <button class="icon-btn" data-a="share" aria-label="Share this book">${I.share}</button>
       <a class="icon-btn" href="#/edit/${b.id}" aria-label="Edit book">${I.edit}</a>
       <button class="icon-btn" data-a="menu" aria-label="More options">${I.more}</button></div>`}
-    <div class="detail-hero"><button class="cover-btn" data-a="cover" aria-label="${b.cover ? 'Change cover' : 'Choose a cover'}">${coverHTML(b, 'lg')}</button>
+    <div class="detail-hero"><button class="cover-btn${r.embedded ? '' : ' vt-hero'}" data-a="cover" aria-label="${b.cover ? 'Change cover' : 'Choose a cover'}">${coverHTML(b, 'lg')}</button>
       <div class="ti"><h1>${esc(b.title)}</h1><a class="by author-link" href="#/books?author=${encodeURIComponent(b.author)}" aria-label="All books by ${esc(b.author)}">${esc(b.author)}</a>
         <div style="display:flex;align-items:center;gap:6px;margin-left:-10px">
           <button class="icon-btn heart-btn" data-a="fav" aria-pressed="${b.favourite}" aria-label="${b.favourite ? 'Remove from favourites' : 'Add to favourites'}">${b.favourite ? I.heartFill : I.heart}</button>

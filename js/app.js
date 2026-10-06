@@ -6,6 +6,7 @@ import * as sync from './sync.js';
 import { fillMissingCovers } from './covers.js';
 import { tap } from './fx.js';
 import { takeIncomingShare } from './incoming.js';
+import { initOfflineBanner, initMiniBar, updateMiniBar, initPullToRefresh, initRipples, canMorph, coverNear, morph } from './polish.js';
 import home from './views/home.js';
 import books from './views/books.js';
 import detail from './views/detail.js';
@@ -42,20 +43,69 @@ function parse() {
   return { view: home, params: [], query, path: '/', tab: 'home' };
 }
 
-function render(scrollTop = true) {
+/** Draw the current screen. scroll: 'top' | 'restore' | 'keep'. enter: play the entrance animation. */
+function render({ scroll = 'top', enter = true } = {}) {
   const r = parse();
   if (active && active.view.leave) active.view.leave();
   active = r;
   r.host = document.createElement('div');
-  r.host.className = 'enter'; // entrance animations play once, when arriving on a screen
-  const enterHost = r.host; setTimeout(() => enterHost.classList.remove('enter'), 2200);
+  if (enter) { // entrance animations play once, when arriving on a screen
+    r.host.className = 'enter';
+    const enterHost = r.host; setTimeout(() => enterHost.classList.remove('enter'), 2200);
+  }
   main.replaceChildren(r.host);
   r.view.render(r.host, r);
   setNav(r.tab);
-  if (scrollTop) window.scrollTo(0, 0);
+  if (scroll === 'top') window.scrollTo(0, 0);
+  if (scroll === 'restore') window.scrollTo(0, scrollMem.get(curIdx) || 0);
   const h = main.querySelector('h1');
   document.title = h ? `${h.textContent.trim()} · Beth's Books` : "Beth's Books";
+  updateMiniBar();
 }
+
+// ---------- History: remember where she was on each screen ----------
+const scrollMem = new Map();
+let curIdx = 0, maxIdx = 0;
+/** Label the current history entry; returns 'new', 'back' or 'forward'. */
+function trackEntry() {
+  const st = history.state;
+  if (st && typeof st.idx === 'number') { const dir = st.idx < curIdx ? 'back' : 'forward'; curIdx = st.idx; return dir; }
+  maxIdx = Math.max(maxIdx, curIdx) + 1; curIdx = maxIdx;
+  try { history.replaceState({ ...(st || {}), idx: curIdx }, '', location.href); } catch {}
+  return 'new';
+}
+
+/** Handle a change of screen (link, back button, or a cover tap). */
+function onNavigate({ fromCover = null } = {}) {
+  scrollMem.set(curIdx, window.scrollY);
+  const prev = active;
+  const dir = trackEntry();
+  window.__bbNav++;
+  const keep = prev && prev.tab === 'books' && /^#\/(book\/|books)/.test(location.hash) && matchMedia('(min-width: 900px)').matches;
+  const scroll = keep ? 'keep' : dir === 'new' ? 'top' : 'restore';
+  const next = parse();
+  const leavingBook = prev?.path?.startsWith('/book/') && !next.path.startsWith('/book/');
+  if (canMorph() && (fromCover || leavingBook)) {
+    const id = leavingBook ? prev.params[0] : null;
+    morph(() => render({ scroll, enter: false }), {
+      from: fromCover,
+      findTo: id ? () => main.querySelector(`.swipe-wrap[data-id="${CSS.escape(id)}"] .cover, a[href="#/book/${CSS.escape(id)}"] .cover`) : null,
+    });
+  } else {
+    render({ scroll, enter: true });
+  }
+}
+
+// Tapping a book: its cover glides into the book's page.
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href^="#/book/"]');
+  if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || !canMorph() || sheetOpen()) return;
+  const cover = coverNear(a);
+  if (!cover || !cover.getBoundingClientRect().height) return;
+  e.preventDefault();
+  history.pushState(null, '', a.getAttribute('href'));
+  onNavigate({ fromCover: cover });
+});
 
 function rerender() {
   if (!active) return;
@@ -68,6 +118,7 @@ function rerender() {
   active.view.render(active.host, active);
   window.scrollTo(0, y);
   if (focusId) document.getElementById(focusId)?.focus({ preventScroll: true });
+  updateMiniBar();
 }
 
 function setNav(tab) {
@@ -138,13 +189,22 @@ async function boot() {
   store.onChange(() => { applyTheme(); rerender(); });
   takeIncomingShare(); // opened from another app's Share menu
   window.__bbNav = 0;
-  window.addEventListener('hashchange', () => {
-    window.__bbNav++;
-    const prev = active;
-    const keep = prev && prev.tab === 'books' && /^#\/(book\/|books)/.test(location.hash) && matchMedia('(min-width: 900px)').matches;
-    render(!keep);
-  });
+  try { history.replaceState({ ...(history.state || {}), idx: 0 }, '', location.href); } catch {}
+  window.addEventListener('hashchange', () => onNavigate());
   render();
+  initMiniBar(); updateMiniBar();
+  initRipples();
+  initOfflineBanner(() => sync.enabled());
+  initPullToRefresh({
+    canPull: () => !sheetOpen() && !document.querySelector('.scanner') && (active?.tab === 'home' || active?.path === '/books'),
+    onRefresh: async () => {
+      if (!sync.enabled()) { fillMissingCovers(); toast('Only on this device. Connect the online library under More to sync.'); return; }
+      if (!navigator.onLine) { toast("You're offline. Changes will sync when you're back."); return; }
+      await sync.syncNow();
+      fillMissingCovers();
+      toast(sync.status.state === 'idle' ? 'Up to date' : sync.describe());
+    },
+  });
   const splash = document.getElementById('splash');
   splash.classList.add('gone');
   setTimeout(() => splash.remove(), 400);

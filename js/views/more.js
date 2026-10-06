@@ -9,7 +9,7 @@ import * as sync from '../sync.js';
 import { openSyncSetup } from '../syncui.js';
 import { fillMissingCovers } from '../covers.js';
 
-const VERSION = '1.5.0';
+const VERSION = '1.6.0';
 
 const item = (href, icon, title, sub, attrs = '') => `<${href ? `a href="${href}"` : `button ${attrs}`} class="menu-item"><span class="ic">${icon}</span><span class="tx"><b>${title}</b>${sub ? `<span>${sub}</span>` : ''}</span><span class="chev">${I.chev}</span></${href ? 'a' : 'button'}>`;
 
