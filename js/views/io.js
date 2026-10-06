@@ -1,6 +1,6 @@
 // Spreadsheet import, spreadsheet export, JSON backup and restore.
 import { state, cleanBook, ensureGenre, createShelf, bulkPutBooks, snapshot, saveSettings, replaceAllData, mergeData, genreName, shelfName, MAX_GENRES } from '../store.js';
-import { esc, I, uid, nowISO, todayISO, dupKey, norm, plural, download, loadXLSX, STATUS, starsText } from '../util.js';
+import { esc, I, uid, nowISO, todayISO, dupKey, norm, plural, download, loadXLSX, STATUS, starsText, normaliseIsbn } from '../util.js';
 import { openSheet, closeSheet, confirmDialog, toast, safely } from '../ui.js';
 
 // ================= Export =================
@@ -15,6 +15,7 @@ function rowsForExport() {
     Favourite: b.favourite ? 'Yes' : '',
     Shelves: b.shelves.map(shelfName).filter(Boolean).join(', '),
     Pages: b.pageCount ?? '',
+    ISBN: b.isbn || '',
     'Current page': b.status === 'reading' ? (b.currentPage ?? '') : '',
     'Date added': (b.dateAdded || '').slice(0, 10),
     'Date started': b.dateStarted || '',
@@ -39,7 +40,7 @@ export async function exportXLSX() {
   let XLSX;
   try { XLSX = await loadXLSX(); } catch { toast("The Excel exporter couldn't load. Try CSV instead."); return; }
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [{ wch: 36 }, { wch: 24 }, { wch: 18 }, { wch: 26 }, { wch: 7 }, { wch: 60 }, { wch: 10 }, { wch: 26 }, { wch: 7 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
+  ws['!cols'] = [{ wch: 36 }, { wch: 24 }, { wch: 18 }, { wch: 26 }, { wch: 7 }, { wch: 60 }, { wch: 10 }, { wch: 26 }, { wch: 7 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
   ws['!autofilter'] = { ref: ws['!ref'] };
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Library');
@@ -115,6 +116,7 @@ const FIELDS = [
   ['favourite', 'Favourite', ['favourite', 'favorite', 'fav', 'favourites', 'favorites', 'loved']],
   ['shelves', 'Shelves', ['shelves', 'shelf', 'bookshelves', 'collections', 'collection', 'lists', 'tags']],
   ['pageCount', 'Pages', ['pages', 'page count', 'number of pages', 'no of pages', 'length']],
+  ['isbn', 'ISBN', ['isbn', 'isbn13', 'isbn 13', 'isbn10', 'isbn 10', 'ean']],
   ['dateFinished', 'Date finished', ['date read', 'date finished', 'finished', 'read date', 'completed', 'date completed', 'finished on', 'read on']],
   ['dateStarted', 'Date started', ['date started', 'started', 'start date', 'started on']],
 ];
@@ -379,6 +381,7 @@ function buildPlan() {
       title, author, status, rating: r.value, review: String(get(row, 'review') ?? '').trim(),
       favourite: m.favourite != null ? truthy(get(row, 'favourite')) : false,
       pageCount, dateStarted, dateFinished: status === 'read' ? dateFinished : null,
+      isbn: m.isbn != null ? normaliseIsbn(get(row, 'isbn')) : null,
     };
     const shelfNames = m.shelves != null ? splitList(get(row, 'shelves')).filter(s => !/^(read|to-read|currently-reading)$/i.test(s)) : [];
     const key = dupKey(book);
@@ -416,6 +419,7 @@ async function runImport() {
       if (b.pageCount) base.pageCount = b.pageCount;
       if (b.dateFinished) base.dateFinished = b.dateFinished;
       if (b.dateStarted) base.dateStarted = b.dateStarted;
+      if (b.isbn && !base.isbn) base.isbn = b.isbn;
       if (wiz.map.status != null) base.status = b.status;
       base.updatedAt = now;
       touched.set(base.id, base);

@@ -7,6 +7,7 @@ Cloudflare Pages, with an optional online library (Cloudflare D1) so books can b
 index.html         the app (repo root = the website)
 x/                 one-off spreadsheet importer, at /x/
 s/                 page that shows a shared book, at /s/
+w/                 page that shows a shared wishlist, at /w/
 _headers           caching rules for Cloudflare
 functions/api/     the sync API, at /api/sync (Cloudflare Pages Function)
 ```
@@ -69,10 +70,27 @@ one it shows so they appear offline.
 ## Colour palettes
 **More → Colour palette**: Rosewater (pink, the default), Buttercream (cream) or Cornflower (blue). The choice is per device.
 
+## Scanning a barcode
+**+ → Scan a barcode** opens the camera. Point it at the barcode on the back of a book: if it's already in the library
+the app says so (and whether it's been read); otherwise it looks the ISBN up on Open Library (then Google Books) and
+adds it with title, author, cover and page count. **Type the ISBN instead** works when scanning doesn't. The first
+scan asks for camera permission. Scanning uses Chrome on Android's built-in barcode reader; other browsers get the
+type-the-ISBN option.
+
 ## Sharing a book
 On a book's page, tap **Share** (or long-press a book in the list). A link is copied that opens a page showing the title,
 author, Beth's rating and review. Everything is inside the link itself, so nothing is uploaded. On Android the
 "Share…" button in the message opens the phone's share sheet.
+
+## Wishlist
+**My books → Want to read → Share as a wishlist** (or **More → Share wishlist**) copies a link to a page listing her
+Want to Read books, with "Find it" links to Bookshop.org. The link is a snapshot: share a new one after adding books.
+
+## Sharing into the app
+In Chrome, Amazon, Waterstones, Goodreads etc., tap **Share → Beth's Books**. If the link contains an ISBN (Waterstones,
+Amazon book pages) the book opens straight away; otherwise the search opens with the title filled in. Long-pressing the
+app icon also offers **Scan a barcode**. Both need the installed app; Android picks up the change within a day or so
+(removing and reinstalling the app makes it immediate; the library is safe in the online library).
 
 ## Backups
 **More → Export & backup → Download full backup** gives a `.json` file with everything.

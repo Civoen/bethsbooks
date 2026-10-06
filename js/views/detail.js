@@ -66,7 +66,7 @@ function render(host, r) {
       <a class="icon-btn" href="#/edit/${b.id}" aria-label="Edit book">${I.edit}</a>
       <button class="icon-btn" data-a="menu" aria-label="More options">${I.more}</button></div>`}
     <div class="detail-hero"><button class="cover-btn" data-a="cover" aria-label="${b.cover ? 'Change cover' : 'Choose a cover'}">${coverHTML(b, 'lg')}</button>
-      <div class="ti"><h1>${esc(b.title)}</h1><div class="by">${esc(b.author)}</div>
+      <div class="ti"><h1>${esc(b.title)}</h1><a class="by author-link" href="#/books?author=${encodeURIComponent(b.author)}" aria-label="All books by ${esc(b.author)}">${esc(b.author)}</a>
         <div style="display:flex;align-items:center;gap:6px;margin-left:-10px">
           <button class="icon-btn heart-btn" data-a="fav" aria-pressed="${b.favourite}" aria-label="${b.favourite ? 'Remove from favourites' : 'Add to favourites'}">${b.favourite ? I.heartFill : I.heart}</button>
           <span class="count-line">${b.favourite ? 'Favourite' : ''}</span>

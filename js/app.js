@@ -5,12 +5,14 @@ import { openSheet, closeSheet, toast, sheetOpen } from './ui.js';
 import * as sync from './sync.js';
 import { fillMissingCovers } from './covers.js';
 import { tap } from './fx.js';
+import { takeIncomingShare } from './incoming.js';
 import home from './views/home.js';
 import books from './views/books.js';
 import detail from './views/detail.js';
 import form from './views/form.js';
 import stats from './views/stats.js';
 import more from './views/more.js';
+import scan, { canScan } from './views/scan.js';
 
 const routes = [
   [/^\/?$|^\/home$/, home, 'home'],
@@ -18,6 +20,7 @@ const routes = [
   [/^\/book\/([^/]+)$/, detail, 'books'],
   [/^\/shelf\/([^/]+)$/, books, 'books'],
   [/^\/add$/, form, 'add'],
+  [/^\/scan$/, scan, 'add'],
   [/^\/edit\/([^/]+)$/, form, 'books'],
   [/^\/stats$/, stats, 'stats'],
   [/^\/(more|genres|shelves|data)$/, more, 'more'],
@@ -86,9 +89,10 @@ export function openAddMenu() {
   const opt = (a, icon, title, sub) => `<button class="menu-item" data-a="${a}"><span class="ic">${icon}</span><span class="tx"><b>${title}</b><span>${sub}</span></span><span class="chev">${I.chev}</span></button>`;
   openSheet({
     title: 'Add a book',
-    body: `<div class="menu">${opt('search', I.search, 'Search for a book', 'Check your library, then look it up online')}${opt('manual', I.pen, 'Enter manually', 'Type in the title and author')}</div>`,
+    body: `<div class="menu">${canScan() ? opt('scan', I.camera, 'Scan a barcode', 'Point your camera at the back of the book') : opt('scan', I.camera, 'Look up by ISBN', 'Type the number from the back of the book')}${opt('search', I.search, 'Search for a book', 'Check your library, then look it up online')}${opt('manual', I.pen, 'Enter manually', 'Type in the title and author')}</div>`,
     onMount: el => el.addEventListener('click', e => {
       const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return;
+      if (a === 'scan') closeSheet('/scan');
       if (a === 'search') closeSheet('/add?mode=search');
       if (a === 'manual') closeSheet('/add');
     }),
@@ -132,6 +136,7 @@ async function boot() {
   applyTheme();
   buildNav();
   store.onChange(() => { applyTheme(); rerender(); });
+  takeIncomingShare(); // opened from another app's Share menu
   window.__bbNav = 0;
   window.addEventListener('hashchange', () => {
     window.__bbNav++;

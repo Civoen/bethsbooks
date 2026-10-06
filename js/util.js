@@ -164,6 +164,35 @@ export const I = {
   refresh: svg('<path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4"/>'),
   phone: svg('<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>'),
   share: svg('<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4"/>'),
+  camera: svg('<path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/>'),
+  bulb: svg('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>'),
+  gift: svg('<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8M12 8S10.5 3 8 3a2.5 2.5 0 0 0 0 5M12 8s1.5-5 4-5a2.5 2.5 0 0 1 0 5"/>'),
   minus: svg('<path d="M5 12h14"/>', 'stroke-width="2.2"'),
   database: svg('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>'),
 };
+
+// ---------- ISBN helpers ----------
+function isbn13Valid(s) {
+  if (!/^\d{13}$/.test(s)) return false;
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += Number(s[i]) * (i % 2 ? 3 : 1);
+  return (10 - (sum % 10)) % 10 === Number(s[12]);
+}
+function isbn10to13(s) {
+  s = s.toUpperCase();
+  if (!/^\d{9}[\dX]$/.test(s)) return null;
+  let sum = 0;
+  for (let i = 0; i < 10; i++) sum += (s[i] === 'X' ? 10 : Number(s[i])) * (10 - i);
+  if (sum % 11) return null;
+  const core = '978' + s.slice(0, 9);
+  let t = 0;
+  for (let i = 0; i < 12; i++) t += Number(core[i]) * (i % 2 ? 3 : 1);
+  return core + ((10 - (t % 10)) % 10);
+}
+/** Returns a valid 13-digit book ISBN, or null if the code isn't one. */
+export function normaliseIsbn(raw) {
+  const s = String(raw || '').replace(/[^0-9Xx]/g, '');
+  if (s.length === 13) return /^97[89]/.test(s) && isbn13Valid(s) ? s : null;
+  if (s.length === 10) return isbn10to13(s);
+  return null;
+}

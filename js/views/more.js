@@ -4,11 +4,12 @@ import { openSheet, closeSheet, confirmDialog, promptText, toast, safely } from 
 import { openGoalSheet } from './detail.js';
 import { installPrompt, promptInstall, PALETTES } from '../app.js';
 import { exportCSV, exportXLSX, exportBackup, pickRestore } from './io.js';
+import { shareWishlist } from '../share.js';
 import * as sync from '../sync.js';
 import { openSyncSetup } from '../syncui.js';
 import { fillMissingCovers } from '../covers.js';
 
-const VERSION = '1.3.0';
+const VERSION = '1.5.0';
 
 const item = (href, icon, title, sub, attrs = '') => `<${href ? `a href="${href}"` : `button ${attrs}`} class="menu-item"><span class="ic">${icon}</span><span class="tx"><b>${title}</b>${sub ? `<span>${sub}</span>` : ''}</span><span class="chev">${I.chev}</span></${href ? 'a' : 'button'}>`;
 
@@ -30,6 +31,7 @@ function renderMore(host) {
     <div class="settings-group"><h2>Library</h2><div class="card menu">
       ${item('#/shelves', I.shelf, 'Shelves', plural(state.shelves.length, 'shelf', 'shelves'))}
       ${item('#/genres', I.tag, 'Genres', plural(state.genres.length, 'genre'))}
+      ${item(null, I.gift, 'Share wishlist', `${plural(state.books.filter(b => b.status === 'want').length, 'book')} on your Want to Read list`, 'data-a="wish"')}
       ${item('#/data', I.database, 'Export & backup', s.lastBackup ? `Last backup ${fmtDate(s.lastBackup)}` : 'No backup yet')}
     </div></div>
     <div class="settings-group"><h2>Online library</h2><div class="card menu">${syncHTML()}</div></div>
@@ -60,6 +62,7 @@ function renderMore(host) {
     if (a === 'goal') openGoalSheet();
     if (a === 'name') { const n = await promptText({ title: 'Your name', label: 'Name for the greeting', value: s.name || '' }); if (n) await safely(() => saveSettings({ name: n })); }
     if (a === 'install') promptInstall();
+    if (a === 'wish') shareWishlist();
     if (a === 'sync-setup') { if (await openSyncSetup()) toast('Connected — your library is synced'); }
     if (a === 'sync-now') { await sync.syncNow(); toast(sync.status.state === 'idle' ? 'Synced' : sync.describe()); }
     if (a === 'sync-off') {

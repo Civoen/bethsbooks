@@ -1,10 +1,10 @@
 // Beth's Books service worker — makes the app open and work fully offline.
-const VERSION = 'bb-v1.3.0';
+const VERSION = 'bb-v1.5.0';
 const SHELL = [
   './', './manifest.webmanifest', './css/app.css',
-  './js/app.js', './js/db.js', './js/store.js', './js/ui.js', './js/util.js', './js/sync.js', './js/syncui.js', './js/covers.js', './js/share.js', './js/fx.js',
+  './js/app.js', './js/db.js', './js/store.js', './js/ui.js', './js/util.js', './js/sync.js', './js/syncui.js', './js/covers.js', './js/share.js', './js/incoming.js', './js/fx.js',
   './js/views/home.js', './js/views/books.js', './js/views/detail.js', './js/views/form.js',
-  './js/views/stats.js', './js/views/more.js', './js/views/io.js',
+  './js/views/stats.js', './js/views/scan.js', './js/views/more.js', './js/views/io.js',
   './vendor/xlsx.full.min.js',
   './fonts/figtree-latin-400-normal.woff2', './fonts/figtree-latin-500-normal.woff2',
   './fonts/figtree-latin-600-normal.woff2', './fonts/figtree-latin-700-normal.woff2',
@@ -58,7 +58,7 @@ self.addEventListener('fetch', (e) => {
   }
 
   // Book covers from Open Library: keep a copy so they show offline.
-  if (url.hostname === 'covers.openlibrary.org' || url.hostname.endsWith('.archive.org')) {
+  if (url.hostname === 'covers.openlibrary.org' || url.hostname.endsWith('.archive.org') || url.hostname === 'books.google.com' || url.hostname.endsWith('.googleusercontent.com')) {
     e.respondWith(caches.open(COVERS).then(async c => {
       const hit = await c.match(req);
       if (hit) return hit;

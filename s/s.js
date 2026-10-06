@@ -18,7 +18,7 @@ function show() {
 
   const title = String(d.t).slice(0, 300), author = String(d.a || '').slice(0, 200);
   const r = Number.isInteger(d.r) && d.r >= 1 && d.r <= 5 ? d.r : null;
-  const cover = typeof d.c === 'string' && /^https:\/\/covers\.openlibrary\.org\//.test(d.c) ? d.c : null;
+  const cover = typeof d.c === 'string' && /^https:\/\/(covers\.openlibrary\.org|books\.google\.com|books\.googleusercontent\.com)\//.test(d.c) ? d.c : null;
   const review = typeof d.v === 'string' ? d.v.slice(0, 2100) : '';
   document.title = `${title}${author ? ' by ' + author : ''} · Beth's Books`;
 

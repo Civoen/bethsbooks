@@ -14,9 +14,9 @@ function render(host, r) {
 
   const prefill = r._prefill || {};
   const f = existing ? structuredClone(existing) : {
-    title: r.query.title || prefill.title || '', author: prefill.author || '', status: 'read', genres: [], shelves: [], rating: null, review: '',
+    title: r.query.title || prefill.title || '', author: prefill.author || '', status: prefill.status || 'read', genres: [], shelves: [], rating: null, review: '',
     favourite: false, pageCount: prefill.pageCount || null, currentPage: null, cover: prefill.cover || null,
-    dateStarted: null, dateFinished: todayISO(),
+    dateStarted: null, dateFinished: todayISO(), isbn: prefill.isbn || null, coverChecked: !!prefill.coverChecked,
   };
   // Genres/shelves are tracked by name so new ones can be created on save.
   let genres = f.genres.map(genreName).filter(Boolean);
@@ -153,7 +153,7 @@ function render(host, r) {
         title, author, status: f.status, genres: genreIds.filter(Boolean), shelves: shelfIds.filter(Boolean),
         rating: f.status === 'read' ? f.rating : (existing ? existing.rating : null),
         review: f.review || '', favourite: $('#fav').checked, pageCount: f.pageCount, currentPage: f.status === 'read' && f.pageCount ? f.pageCount : f.currentPage,
-        cover: f.cover, coverChecked: !!f.coverChecked || !!f.cover, dateStarted: f.status === 'want' ? (existing?.dateStarted || null) : f.dateStarted,
+        cover: f.cover, coverChecked: !!f.coverChecked || !!f.cover, isbn: f.isbn || existing?.isbn || null, dateStarted: f.status === 'want' ? (existing?.dateStarted || null) : f.dateStarted,
         dateFinished: f.status === 'read' ? f.dateFinished : (existing?.dateFinished || null),
       };
       return editing ? updateBook(existing.id, data) : addBook(data);
@@ -171,6 +171,7 @@ function renderSearch(host, r) {
     <div class="topbar"><button class="icon-btn" data-a="cancel" aria-label="Back">${I.back}</button><span class="grow"></span></div>
     <h1 class="page-title">Search for a book</h1>
     <div class="search" role="search"><label for="sq" class="sr">Title or author</label>${I.search}<input id="sq" type="search" placeholder="Title or author" value="${esc(r.query.q || '')}" autocomplete="off" enterkeyhint="search" autofocus></div>
+    ${r.query.shared ? `<div class="notice ok">${I.info}<span>${r.query.q ? 'Shared from another app. Check it’s the right book below.' : 'We couldn’t tell which book that was. Search for it by title or author.'}</span></div>` : ''}
     <div id="s-lib"></div>
     <div id="s-web"></div>
     <a class="btn btn-ghost" href="#/add" id="s-manual">${I.pen} Enter it manually instead</a>

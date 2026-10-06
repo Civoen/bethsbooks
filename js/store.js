@@ -50,6 +50,7 @@ export function cleanBook(b) {
     review: String(b.review ?? ''),
     favourite: !!b.favourite,
     pageCount: num(b.pageCount),
+    isbn: /^\d{13}$/.test(String(b.isbn || '')) ? String(b.isbn) : null,
     currentPage: num(b.currentPage),
     cover: typeof b.cover === 'string' && /^https:\/\//.test(b.cover) ? b.cover : null,
     coverChecked: !!b.coverChecked,   // automatic cover lookup has been tried

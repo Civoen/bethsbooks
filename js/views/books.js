@@ -1,12 +1,13 @@
 import { state, genreName, shelfName, toggleFavourite, renameShelf, deleteShelf, getBook } from '../store.js';
-import { esc, I, coverHTML, starsText, badgeHTML, norm, plural, STATUS, debounce } from '../util.js';
+import { esc, I, coverHTML, starsText, badgeHTML, norm, plural, STATUS, debounce, authorKey } from '../util.js';
+import { shareWishlist } from '../share.js';
 import { openSheet, closeSheet, confirmDialog, promptText, toast, safely } from '../ui.js';
 import { openQuickActions } from './detail.js';
 import detailView from './detail.js';
 import { tap, pop, heartBurst, centreOf } from '../fx.js';
 
 // Library filters survive navigation between screens.
-export const filters = { q: '', status: 'all', fav: false, genre: '', shelf: '', minRating: 0, sort: 'recent' };
+export const filters = { q: '', status: 'all', fav: false, genre: '', shelf: '', minRating: 0, author: '', sort: 'recent' };
 
 const SORTS = {
   recent: ['Recently added', (a, b) => (b.dateAdded || '').localeCompare(a.dateAdded || '')],
@@ -26,7 +27,7 @@ export function searchBooks(list, q) {
   if (!words.length) return list;
   const scored = [];
   for (const b of list) {
-    const head = norm(b.title + ' ' + b.author);
+    const head = norm(b.title + ' ' + b.author + ' ' + (b.isbn || ''));
     const rest = norm([...b.genres.map(genreName), ...b.shelves.map(shelfName), b.review].join(' '));
     let score = 0, ok = true;
     for (const word of words) {
@@ -61,6 +62,7 @@ function applyFilters(lockedShelf) {
   if (filters.fav) list = list.filter(b => b.favourite);
   if (filters.genre) list = list.filter(b => b.genres.includes(filters.genre));
   if (filters.minRating) list = list.filter(b => (b.rating || 0) >= filters.minRating);
+  if (filters.author) { const k = authorKey(filters.author); list = list.filter(b => authorKey(b.author) === k); }
   const counts = { all: list.length, want: 0, reading: 0, read: 0 };
   for (const b of list) counts[b.status]++;
   if (filters.status !== 'all') list = list.filter(b => b.status === filters.status);
@@ -69,7 +71,7 @@ function applyFilters(lockedShelf) {
   return { list, counts };
 }
 
-const activeFilterCount = (locked) => (filters.fav ? 1 : 0) + (filters.genre ? 1 : 0) + (!locked && filters.shelf ? 1 : 0) + (filters.minRating ? 1 : 0);
+const activeFilterCount = (locked) => (filters.fav ? 1 : 0) + (filters.genre ? 1 : 0) + (!locked && filters.shelf ? 1 : 0) + (filters.minRating ? 1 : 0) + (filters.author ? 1 : 0);
 
 function dynamicHTML(lockedShelf, selectedId) {
   const { list, counts } = applyFilters(lockedShelf);
@@ -78,6 +80,7 @@ function dynamicHTML(lockedShelf, selectedId) {
   if (filters.fav) af.push(['fav', `${I.heartFill} Favourites`]);
   if (filters.genre) af.push(['genre', esc(genreName(filters.genre))]);
   if (filters.shelf && !lockedShelf) af.push(['shelf', esc(shelfName(filters.shelf))]);
+  if (filters.author) af.push(['author', `By ${esc(filters.author)}`]);
   if (filters.minRating) af.push(['minRating', `${filters.minRating}+ stars`]);
   const n = activeFilterCount(lockedShelf);
 
@@ -106,6 +109,7 @@ function dynamicHTML(lockedShelf, selectedId) {
       <span class="count-line" aria-live="polite">${q ? plural(list.length, 'match', 'matches') : plural(list.length, 'book')}</span>
       ${q ? '<span></span>' : `<label class="sr" for="sort">Sort by</label><select id="sort">${Object.entries(SORTS).map(([k, [l]]) => `<option value="${k}"${filters.sort === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`}
     </div>
+    ${filters.status === 'want' && counts.want && !q && !lockedShelf ? `<button class="wish-banner" data-a="share-wish"><span class="ic">${I.gift}</span><span><b>Share as a wishlist</b><span>Send your Want to Read list, handy for birthdays and Christmas</span></span>${I.share}</button>` : ''}
     ${results}`;
 }
 
@@ -117,7 +121,8 @@ function render(host, r, selectedId) {
   // Query-string shortcuts from the dashboard
   if (r.query && Object.keys(r.query).length && !r._applied) {
     r._applied = true;
-    if (r.query.status) { filters.status = r.query.status; filters.fav = false; filters.genre = ''; filters.shelf = ''; filters.minRating = 0; filters.q = ''; }
+    if (r.query.status) { filters.status = r.query.status; filters.fav = false; filters.genre = ''; filters.shelf = ''; filters.minRating = 0; filters.author = ''; filters.q = ''; }
+    if (r.query.author) { Object.assign(filters, { author: r.query.author, status: 'all', fav: false, genre: '', shelf: '', minRating: 0, q: '' }); }
     if (r.query.fav) { filters.fav = true; filters.status = 'all'; filters.q = ''; }
     if (r.query.sort) filters.sort = r.query.sort;
     if (r.query.genre) { filters.genre = r.query.genre; filters.status = 'all'; filters.q = ''; }
@@ -168,9 +173,10 @@ function render(host, r, selectedId) {
     }
     const cl = t.closest('[data-clear]');
     if (cl) { const k = cl.dataset.clear; filters[k] = k === 'minRating' ? 0 : k === 'fav' ? false : ''; refresh(); return; }
-    if (t.closest('[data-clear-all]')) { Object.assign(filters, { fav: false, genre: '', shelf: '', minRating: 0, status: 'all' }); refresh(); return; }
+    if (t.closest('[data-clear-all]')) { Object.assign(filters, { fav: false, genre: '', shelf: '', minRating: 0, author: '', status: 'all' }); refresh(); return; }
     if (t.closest('[data-a="clear-q"]')) { q.value = ''; filters.q = ''; clearBtn.hidden = true; refresh(); q.focus(); return; }
     if (t.closest('[data-a="filters"]')) { openFilterSheet(lockedShelf, refresh); return; }
+    if (t.closest('[data-a="share-wish"]')) { shareWishlist(); return; }
     if (t.closest('[data-a="shelf-menu"]')) { openShelfMenu(lockedShelf); return; }
   });
 
