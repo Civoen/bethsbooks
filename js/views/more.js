@@ -7,9 +7,9 @@ import { exportCSV, exportXLSX, exportBackup, pickRestore } from './io.js';
 import { shareWishlist } from '../share.js';
 import * as sync from '../sync.js';
 import { openSyncSetup } from '../syncui.js';
-import { fillMissingCovers } from '../covers.js';
+import { fillMissingCovers, retryAllCovers, coverProgress, onCoverProgress } from '../covers.js';
 
-const VERSION = '1.6.0';
+const VERSION = '1.6.1';
 
 const item = (href, icon, title, sub, attrs = '') => `<${href ? `a href="${href}"` : `button ${attrs}`} class="menu-item"><span class="ic">${icon}</span><span class="tx"><b>${title}</b>${sub ? `<span>${sub}</span>` : ''}</span><span class="chev">${I.chev}</span></${href ? 'a' : 'button'}>`;
 
@@ -20,6 +20,13 @@ function syncHTML() {
   return `<div class="menu-item" style="cursor:default"><span class="ic">${I.refresh}</span><span class="tx"><b><span class="sync-dot ${dot}" aria-hidden="true"></span>Sync is on</b><span>${esc(sync.describe())}</span></span></div>
     ${st === 'unauthorised' ? item(null, I.alert, 'Enter the sync key again', 'The saved key was not accepted', 'data-a="sync-setup"') : item(null, I.refresh, 'Sync now', '', 'data-a="sync-now"')}
     ${item(null, I.close, 'Disconnect this device', 'Stop syncing here', 'data-a="sync-off"')}`;
+}
+
+function coverStatusHTML() {
+  const without = state.books.filter(b => !b.cover).length;
+  const p = coverProgress;
+  if (p.running) return `<div class="cv-line"><span>Finding covers… ${p.done} of ${p.total}</span><span class="muted">${p.found} found</span></div><div class="progress"><span style="width:${p.total ? Math.round(p.done / p.total * 100) : 0}%"></span></div>`;
+  return `<div class="cv-line"><span class="muted">${without ? `${plural(state.books.length - without, 'book')} with covers · ${without} without` : 'Every book has a cover'}</span>${without ? '<button class="btn btn-soft btn-sm" data-a="cv-retry">Find missing covers</button>' : ''}</div>`;
 }
 
 function renderMore(host) {
@@ -41,6 +48,7 @@ function renderMore(host) {
     </div></div>
     <div class="settings-group"><h2>Covers</h2><div class="card" style="padding:4px 10px">
       <label class="switch-row"><span><b>Find covers automatically</b><br><span class="muted" style="font-size:13px">Looks up each book on Open Library. Tap a book's cover to pick a different one.</span></span><span class="switch"><input type="checkbox" id="auto-cv" ${s.autoCovers !== false ? 'checked' : ''}><span></span></span></label>
+      <div class="cover-status" id="cv-status" aria-live="polite">${coverStatusHTML()}</div>
     </div></div>
     <div class="settings-group"><h2 id="th-l">Colour palette</h2><div class="palettes" role="radiogroup" aria-labelledby="th-l">
       ${Object.entries(PALETTES).map(([v, p]) => `<label class="palette"><input type="radio" name="theme" value="${v}" ${(PALETTES[s.theme] ? s.theme : 'rose') === v ? 'checked' : ''}>
@@ -53,6 +61,11 @@ function renderMore(host) {
     </div></div>
   </div>`;
 
+  // Live progress while covers are being found
+  const status = host.querySelector('#cv-status');
+  const paint = () => { if (status.isConnected) status.innerHTML = coverStatusHTML(); };
+  onCoverProgress(paint);
+
   host.addEventListener('change', async e => {
     if (e.target.name === 'theme') safely(() => saveSettings({ theme: e.target.value }));
     if (e.target.id === 'auto-cv') { await safely(() => saveSettings({ autoCovers: e.target.checked })); if (e.target.checked) fillMissingCovers(); }
@@ -62,6 +75,11 @@ function renderMore(host) {
     if (a === 'goal') openGoalSheet();
     if (a === 'name') { const n = await promptText({ title: 'Your name', label: 'Name for the greeting', value: s.name || '' }); if (n) await safely(() => saveSettings({ name: n })); }
     if (a === 'install') promptInstall();
+    if (a === 'cv-retry') {
+      if (!navigator.onLine) { toast("You're offline. Try again when you're connected."); return; }
+      const n = await safely(() => retryAllCovers());
+      if (n) toast(`Looking for ${plural(n, 'cover')}…`);
+    }
     if (a === 'wish') shareWishlist();
     if (a === 'sync-setup') { if (await openSyncSetup()) toast('Connected — your library is synced'); }
     if (a === 'sync-now') { await sync.syncNow(); toast(sync.status.state === 'idle' ? 'Synced' : sync.describe()); }

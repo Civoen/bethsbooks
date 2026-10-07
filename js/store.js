@@ -53,7 +53,9 @@ export function cleanBook(b) {
     isbn: /^\d{13}$/.test(String(b.isbn || '')) ? String(b.isbn) : null,
     currentPage: num(b.currentPage),
     cover: typeof b.cover === 'string' && /^https:\/\//.test(b.cover) ? b.cover : null,
-    coverChecked: !!b.coverChecked,   // automatic cover lookup has been tried
+    coverChecked: !!b.coverChecked,   // cover chosen (or removed) — don't look it up again
+    coverMiss: Number.isInteger(b.coverMiss) && b.coverMiss > 0 ? b.coverMiss : 0, // automatic lookups with no match
+    coverMissAt: b.coverMissAt || null,
     dateAdded: b.dateAdded || nowISO(),
     dateStarted: b.dateStarted || null,
     dateFinished: b.dateFinished || null,

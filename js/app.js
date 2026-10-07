@@ -3,7 +3,7 @@ import * as store from './store.js';
 import { I, esc } from './util.js';
 import { openSheet, closeSheet, toast, sheetOpen } from './ui.js';
 import * as sync from './sync.js';
-import { fillMissingCovers } from './covers.js';
+import { fillMissingCovers, migrateCoverChecks } from './covers.js';
 import { tap } from './fx.js';
 import { takeIncomingShare } from './incoming.js';
 import { initOfflineBanner, initMiniBar, updateMiniBar, initPullToRefresh, initRipples, canMorph, coverNear, morph } from './polish.js';
@@ -217,8 +217,10 @@ async function boot() {
     if (st.state === 'idle') fillMissingCovers();
   });
   sync.startAutoSync();
-  if (!sync.enabled()) fillMissingCovers();
-  window.addEventListener('online', () => { if (!sync.enabled()) fillMissingCovers(); });
+  // Find covers for books that don't have one (straight away, whether or not sync is on)
+  migrateCoverChecks().catch(() => {}).finally(() => fillMissingCovers());
+  window.addEventListener('online', () => fillMissingCovers());
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') fillMissingCovers(); });
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('./sw.js').then(reg => {
       reg.addEventListener('updatefound', () => {

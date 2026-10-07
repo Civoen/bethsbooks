@@ -573,3 +573,6 @@ body:has(#minibar.show) #offline{top:calc(env(safe-area-inset-top) + 64px)}
 @keyframes vtFadeOut{to{opacity:0}}
 @keyframes vtFadeIn{from{opacity:0;transform:translateY(8px)}}
 @media (prefers-reduced-motion: reduce){::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}}
+.cover-status{display:flex;flex-direction:column;gap:8px;padding:4px 4px 12px}
+.cover-status:empty{display:none}
+.cv-line{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;flex-wrap:wrap}
